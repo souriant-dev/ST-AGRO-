@@ -1,0 +1,4 @@
+# Empêche l'exécution de scripts PHP dans le dossier des fichiers envoyés
+<FilesMatch "\.(php|phtml|php\d)$">
+    Require all denied
+</FilesMatch>
