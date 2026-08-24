@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 exigerRole(['administrateur']);
 $pdo = getPDO();
+ensureHistoriqueTablesExists();
 
 $totalUtilisateurs = (int) $pdo->query('SELECT COUNT(*) FROM utilisateurs')->fetchColumn();
 $totalExploitations = (int) $pdo->query('SELECT COUNT(*) FROM exploitations')->fetchColumn();
@@ -19,6 +20,13 @@ $stmt = $pdo->query("SELECT statut, COUNT(*) AS total FROM demandes_conseil GROU
 $parStatutConseil = ['en_attente' => 0, 'en_cours' => 0, 'repondu' => 0];
 foreach ($stmt->fetchAll() as $r) { $parStatutConseil[$r['statut']] = (int) $r['total']; }
 $maxConseil = max(array_values($parStatutConseil) ?: [1]);
+
+$connexions = $pdo->query("SELECT hc.date_connexion, hc.adresse_ip, u.nom, u.prenom, u.email
+    FROM historique_connexions hc JOIN utilisateurs u ON u.id = hc.utilisateur_id
+    ORDER BY hc.date_connexion DESC LIMIT 100")->fetchAll();
+$visites = $pdo->query("SELECT hv.date_visite, hv.page, hv.url, hv.adresse_ip, u.nom, u.prenom, u.email
+    FROM historique_visites hv LEFT JOIN utilisateurs u ON u.id = hv.utilisateur_id
+    ORDER BY hv.date_visite DESC LIMIT 100")->fetchAll();
 
 $titrePage = 'Statistiques globales';
 $filAriane = 'Statistiques globales';
@@ -72,6 +80,30 @@ require __DIR__ . '/../includes/layout_debut.php';
         <p style="margin-top:16px; font-size:0.85rem; color:var(--texte-attenue);">
             <?= $totalAnalyses ?> analyse(s) phytosanitaire(s) enregistrée(s) au total.
         </p>
+    </div>
+</div>
+<div class="grille-2">
+    <div class="carte">
+        <div class="carte-titre"><h3>Historique des connexions</h3></div>
+        <div class="table-wrap">
+            <table class="table-app"><thead><tr><th>Utilisateur</th><th>Date</th><th>Adresse IP</th></tr></thead><tbody>
+            <?php foreach ($connexions as $connexion): ?>
+                <tr><td><?= nettoyer($connexion['prenom'] . ' ' . $connexion['nom']) ?><br><small><?= nettoyer($connexion['email']) ?></small></td><td><?= nettoyer($connexion['date_connexion']) ?></td><td><?= nettoyer((string) $connexion['adresse_ip']) ?></td></tr>
+            <?php endforeach; ?>
+            <?php if (!$connexions): ?><tr><td colspan="3">Aucune connexion enregistrée.</td></tr><?php endif; ?>
+            </tbody></table>
+        </div>
+    </div>
+    <div class="carte">
+        <div class="carte-titre"><h3>Historique des visites de l'application</h3></div>
+        <div class="table-wrap">
+            <table class="table-app"><thead><tr><th>Utilisateur</th><th>Page</th><th>Date</th></tr></thead><tbody>
+            <?php foreach ($visites as $visite): ?>
+                <tr><td><?= $visite['email'] ? nettoyer($visite['prenom'] . ' ' . $visite['nom']) : 'Visiteur non connecté' ?></td><td><?= nettoyer($visite['page']) ?></td><td><?= nettoyer($visite['date_visite']) ?></td></tr>
+            <?php endforeach; ?>
+            <?php if (!$visites): ?><tr><td colspan="3">Aucune visite enregistrée.</td></tr><?php endif; ?>
+            </tbody></table>
+        </div>
     </div>
 </div>
 <?php require __DIR__ . '/../includes/layout_fin.php'; ?>

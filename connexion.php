@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erreurs[] = "Votre compte a été suspendu. Contactez un administrateur.";
         } else {
             connecterUtilisateur($user);
+            enregistrerConnexion((int) $user['id']);
             header('Location: ' . urlDashboard($user['role']));
             exit;
         }

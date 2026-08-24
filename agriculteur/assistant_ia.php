@@ -29,7 +29,7 @@ require __DIR__ . '/../includes/layout_debut.php';
 <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:18px;">
     <div>
         <h1>Demander conseil à l’IA</h1>
-        <p class="sous-titre-page">Discussion avec l’assistant Gemini pour obtenir des conseils agronomiques rapides.</p>
+        <p class="sous-titre-page">Discussion avec l’assistant IA Mistral pour obtenir des conseils agronomiques rapides.</p>
     </div>
 </div>
 

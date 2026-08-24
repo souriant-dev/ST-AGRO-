@@ -29,6 +29,45 @@ function creerNotification(int $utilisateurId, string $titre, string $message): 
     $stmt->execute([$utilisateurId, $titre, $message]);
 }
 
+function ensureHistoriqueTablesExists(): void
+{
+    $pdo = getPDO();
+    $pdo->exec("CREATE TABLE IF NOT EXISTS historique_connexions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        utilisateur_id INT NOT NULL,
+        date_connexion DATETIME DEFAULT CURRENT_TIMESTAMP,
+        adresse_ip VARCHAR(45) DEFAULT NULL,
+        user_agent VARCHAR(255) DEFAULT NULL,
+        FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
+        KEY idx_connexions_utilisateur_date (utilisateur_id, date_connexion)
+    ) ENGINE=InnoDB");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS historique_visites (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        utilisateur_id INT DEFAULT NULL,
+        page VARCHAR(255) NOT NULL,
+        url VARCHAR(500) DEFAULT NULL,
+        date_visite DATETIME DEFAULT CURRENT_TIMESTAMP,
+        adresse_ip VARCHAR(45) DEFAULT NULL,
+        FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE SET NULL,
+        KEY idx_visites_date (date_visite),
+        KEY idx_visites_utilisateur_date (utilisateur_id, date_visite)
+    ) ENGINE=InnoDB");
+}
+
+function enregistrerConnexion(int $utilisateurId): void
+{
+    ensureHistoriqueTablesExists();
+    $stmt = getPDO()->prepare('INSERT INTO historique_connexions (utilisateur_id, adresse_ip, user_agent) VALUES (?, ?, ?)');
+    $stmt->execute([$utilisateurId, $_SERVER['REMOTE_ADDR'] ?? null, substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255)]);
+}
+
+function enregistrerVisite(int $utilisateurId, string $page): void
+{
+    ensureHistoriqueTablesExists();
+    $stmt = getPDO()->prepare('INSERT INTO historique_visites (utilisateur_id, page, url, adresse_ip) VALUES (?, ?, ?, ?)');
+    $stmt->execute([$utilisateurId, $page, substr($_SERVER['REQUEST_URI'] ?? '', 0, 500), $_SERVER['REMOTE_ADDR'] ?? null]);
+}
+
 function compterNotificationsNonLues(int $utilisateurId): int
 {
     $stmt = getPDO()->prepare('SELECT COUNT(*) FROM notifications WHERE utilisateur_id = ? AND lue = 0');
@@ -189,8 +228,19 @@ function obtenirMeteo(string $ville): array
     if (defined('METEO_API_KEY') && METEO_API_KEY !== 'VOTRE_CLE_API_OPENWEATHERMAP') {
         $url = 'https://api.openweathermap.org/data/2.5/weather?q=' . urlencode($ville)
              . '&appid=' . METEO_API_KEY . '&units=metric&lang=fr';
-        $contexte = stream_context_create(['http' => ['timeout' => 4]]);
-        $reponse = @file_get_contents($url, false, $contexte);
+        $ch = curl_init($url);
+        $options = [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 20,
+        ];
+        $certificatCa = __DIR__ . '/../config/cacert.pem';
+        if (is_file($certificatCa)) {
+            $options[CURLOPT_CAINFO] = $certificatCa;
+        }
+        curl_setopt_array($ch, $options);
+        $reponse = curl_exec($ch);
+        curl_close($ch);
         if ($reponse !== false) {
             $data = json_decode($reponse, true);
             if (isset($data['main'])) {
@@ -222,9 +272,9 @@ function obtenirMeteo(string $ville): array
 
 function reponseChatGemini(string $message, ?array $contexte = null): string
 {
-    $apiKey = getenv('GEMINI_API_KEY') ?: (defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '');
+    $apiKey = getenv('MISTRAL_API_KEY') ?: (defined('MISTRAL_API_KEY') ? MISTRAL_API_KEY : '');
     if ($apiKey === '') {
-        return 'La clé Gemini n’est pas configurée. Ajoutez la variable GEMINI_API_KEY ou la constante GEMINI_API_KEY dans l’environnement pour activer le chatbot.';
+        return 'La clé Mistral n’est pas configurée. Ajoutez la variable MISTRAL_API_KEY dans l’environnement pour activer le chatbot.';
     }
 
     $prompt = "Tu es un assistant agricole et agronomique pour une application ST-AGRO. Réponds en français, de manière claire et utile pour un agriculteur. " .
@@ -232,42 +282,102 @@ function reponseChatGemini(string $message, ?array $contexte = null): string
         "Contexte utilisateur : " . ($contexte['profil'] ?? 'Agriculteur') . ".\n\nQuestion : " . $message;
 
     $payload = [
-        'contents' => [[
-            'parts' => [[
-                'text' => $prompt,
-            ]],
-        ]],
-        'generationConfig' => [
-            'temperature' => 0.7,
-            'topP' => 0.95,
-            'maxOutputTokens' => 2048,
+        'model' => 'mistral-small-latest',
+        'messages' => [
+            ['role' => 'user', 'content' => $prompt],
         ],
+        'temperature' => 0.7,
+        'max_tokens' => 2048,
     ];
 
-    $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . urlencode($apiKey);
+    $url = 'https://api.mistral.ai/v1/chat/completions';
     $ch = curl_init();
-    curl_setopt_array($ch, [
+    $options = [
         CURLOPT_URL => $url,
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $apiKey,
+        ],
         CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR),
-    ]);
+    ];
+    $certificatCa = __DIR__ . '/../config/cacert.pem';
+    if (is_file($certificatCa)) {
+        $options[CURLOPT_CAINFO] = $certificatCa;
+    }
+    curl_setopt_array($ch, $options);
 
     $body = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
     if ($body === false || $httpCode < 200 || $httpCode >= 300) {
-        return 'Le chatbot Gemini est momentanément indisponible. Vérifiez votre clé API GEMINI_API_KEY et réessayez.';
+        return 'Le chatbot Mistral est momentanément indisponible. Vérifiez votre clé API MISTRAL_API_KEY et réessayez.';
     }
 
     $data = json_decode($body, true);
-    if (!isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+    if (!isset($data['choices'][0]['message']['content'])) {
         return 'Le chatbot ne renvoie pas de réponse exploitable pour le moment.';
     }
 
-    return trim($data['candidates'][0]['content']['parts'][0]['text']);
+    return trim($data['choices'][0]['message']['content']);
+}
+
+function analyserImagePlantNet(string $cheminImage): array
+{
+    $apiKey = getenv('PLANTNET_API_KEY') ?: (defined('PLANTNET_API_KEY') ? PLANTNET_API_KEY : '');
+    if ($apiKey === '' || $apiKey === 'VOTRE_CLE_API_PLANTNET') {
+        return ['succes' => false, 'message' => 'Clé API Pl@ntNet non configurée.'];
+    }
+    if (!is_file($cheminImage) || !function_exists('curl_init')) {
+        return ['succes' => false, 'message' => 'Le fichier image ou le module cURL est indisponible.'];
+    }
+
+    $url = 'https://my-api.plantnet.org/v2/identify/all?api-key=' . urlencode($apiKey);
+    $ch = curl_init($url);
+    $options = [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 45,
+        CURLOPT_POSTFIELDS => [
+            'images' => new CURLFile($cheminImage),
+            'organs' => 'leaf',
+        ],
+    ];
+    $certificatCa = __DIR__ . '/../config/cacert.pem';
+    if (is_file($certificatCa)) {
+        $options[CURLOPT_CAINFO] = $certificatCa;
+    }
+    curl_setopt_array($ch, $options);
+    $body = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($body === false || $httpCode < 200 || $httpCode >= 300) {
+        return ['succes' => false, 'message' => 'Pl@ntNet n’a pas pu analyser cette image.'];
+    }
+
+    $data = json_decode($body, true);
+    $meilleurResultat = $data['results'][0] ?? null;
+    if (!$meilleurResultat || empty($meilleurResultat['species']['scientificNameWithoutAuthor'])) {
+        return ['succes' => false, 'message' => 'Aucune plante identifiable n’a été trouvée.'];
+    }
+
+    $espece = $meilleurResultat['species'];
+    $nomScientifique = $espece['scientificNameWithoutAuthor'];
+    $nomsCommuns = $espece['commonNames'] ?? [];
+    $nomCommun = $nomsCommuns[0] ?? 'Nom commun non disponible';
+    $score = round(((float) ($meilleurResultat['score'] ?? 0)) * 100, 1);
+    $famille = $espece['family']['scientificNameWithoutAuthor'] ?? 'Famille non disponible';
+
+    return [
+        'succes' => true,
+        'diagnostic' => "Plante identifiée : $nomCommun ($nomScientifique). Famille : $famille. Confiance : $score %.",
+        'niveau_risque' => 'faible',
+        'recommandation' => 'Vérifiez ce résultat avec un agronome, car l’identification dépend de la qualité et du cadrage de la photo.',
+    ];
 }

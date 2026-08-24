@@ -21,6 +21,28 @@ CREATE TABLE utilisateurs (
     date_creation DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE historique_connexions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id INT NOT NULL,
+    date_connexion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    adresse_ip VARCHAR(45) DEFAULT NULL,
+    user_agent VARCHAR(255) DEFAULT NULL,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    KEY idx_connexions_utilisateur_date (utilisateur_id, date_connexion)
+) ENGINE=InnoDB;
+
+CREATE TABLE historique_visites (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id INT DEFAULT NULL,
+    page VARCHAR(255) NOT NULL,
+    url VARCHAR(500) DEFAULT NULL,
+    date_visite DATETIME DEFAULT CURRENT_TIMESTAMP,
+    adresse_ip VARCHAR(45) DEFAULT NULL,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    KEY idx_visites_date (date_visite),
+    KEY idx_visites_utilisateur_date (utilisateur_id, date_visite)
+) ENGINE=InnoDB;
+
 -- ------------------------------------------------------------
 -- Exploitations agricoles (gérées par un agriculteur)
 -- ------------------------------------------------------------

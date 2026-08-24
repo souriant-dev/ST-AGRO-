@@ -33,18 +33,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifierCSRF($_POST['csrf'] ?? null
         }
 
         if (empty($_SESSION['flash'])) {
-            // NOTE : en production, cette étape appellerait l'API IA de diagnostic
-            // phytosanitaire (analyse d'image). Ici, un résultat d'attente est
-            // enregistré et sera complété par un agronome.
+            $resultatPlantNet = $cheminImage ? analyserImagePlantNet($dossier . $nomFichier) : ['succes' => false];
             $stmt = $pdo->prepare('INSERT INTO analyses_phytosanitaires (exploitation_id, image_path, diagnostic, niveau_risque, recommandation) VALUES (?, ?, ?, ?, ?)');
             $stmt->execute([
                 $exploitationId, $cheminImage,
-                'Analyse en attente de validation par un agronome.',
-                'faible',
-                'Un agronome examinera votre photo et complétera le diagnostic sous peu.',
+                $resultatPlantNet['diagnostic'] ?? 'Analyse en attente de validation par un agronome.',
+                $resultatPlantNet['niveau_risque'] ?? 'faible',
+                $resultatPlantNet['recommandation'] ?? 'Un agronome examinera votre photo et complétera le diagnostic sous peu.',
             ]);
-            definirMessage('succes', 'Photo envoyée pour analyse. Un agronome va l\'examiner.');
-            header('Location: /agriculteur/phytosanitaire.php');
+            definirMessage('succes', $resultatPlantNet['succes'] ? 'Photo analysée par Pl@ntNet. Un agronome va vérifier le résultat.' : 'Photo envoyée. L’analyse sera complétée par un agronome.');
+            header('Location: /st-agro/agriculteur/phytosanitaire.php');
             exit;
         }
     }

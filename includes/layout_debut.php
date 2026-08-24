@@ -5,6 +5,7 @@
  */
 $user = utilisateurCourant();
 $role = $user['role'];
+enregistrerVisite((int) $user['id'], basename($_SERVER['SCRIPT_NAME'] ?? 'page inconnue'));
 $nbNotifs = compterNotificationsNonLues($user['id']);
 $initiales = mb_strtoupper(mb_substr($user['prenom'], 0, 1) . mb_substr($user['nom'], 0, 1));
 
@@ -31,6 +32,7 @@ $liensParRole = [
         ['icone' => '&#9679;', 'texte' => 'Tableau de bord', 'href' => '/st-agro/admin/dashboard.php', 'cle' => 'dashboard'],
         ['icone' => '&#128101;', 'texte' => 'Comptes utilisateurs', 'href' => '/st-agro/admin/utilisateurs.php', 'cle' => 'utilisateurs'],
         ['icone' => '&#127806;', 'texte' => 'Exploitations', 'href' => '/st-agro/admin/exploitations.php', 'cle' => 'exploitations'],
+        ['icone' => '&#128225;', 'texte' => 'État des capteurs', 'href' => '/st-agro/admin/capteurs.php', 'cle' => 'capteurs'],
         ['icone' => '&#128202;', 'texte' => 'Statistiques globales', 'href' => '/st-agro/admin/statistiques.php', 'cle' => 'statistiques'],
     ],
 ];
