@@ -17,6 +17,9 @@ define('MISTRAL_API_KEY', getenv('MISTRAL_API_KEY') ?: '4W1sSkCziXVjpjcVmyzGw4oK
 // Clé API Pl@ntNet — https://my.plantnet.org/
 define('PLANTNET_API_KEY', getenv('PLANTNET_API_KEY') ?: '2b10HQN9MoyLyNziC5u9FOdVu');
 
+// Clé API Geoapify — https://www.geoapify.com/
+define('GEOAPIFY_API_KEY', getenv('GEOAPIFY_API_KEY') ?: 'b3246354b4e841fa9fdb97c3ca0c9e14');
+
 function getPDO(): PDO
 {
     static $pdo = null;

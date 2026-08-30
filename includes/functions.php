@@ -219,15 +219,31 @@ function genererSvgGraphique(array $mesures, string $couleur = '#2E86C1'): strin
 }
 
 /**
- * Récupère la météo pour une ville via OpenWeatherMap, avec repli sur un cache local
- * (use case "consulter météo"). Si aucune clé API n'est configurée, renvoie une
- * estimation locale simulée pour ne jamais bloquer l'interface.
+ * Récupère la météo pour une ville ou un point géographique via OpenWeatherMap.
+ * Si des coordonnées sont fournies, elles sont prioritaires pour refléter la vraie
+ * localisation de l’exploitation.
  */
-function obtenirMeteo(string $ville): array
+function obtenirMeteoParLocalisation(?float $latitude = null, ?float $longitude = null, ?string $ville = null): array
 {
+    $ville = trim((string) ($ville ?? ''));
+    $villeDefaut = $ville !== '' ? $ville : 'Yaoundé';
+
     if (defined('METEO_API_KEY') && METEO_API_KEY !== 'VOTRE_CLE_API_OPENWEATHERMAP') {
-        $url = 'https://api.openweathermap.org/data/2.5/weather?q=' . urlencode($ville)
-             . '&appid=' . METEO_API_KEY . '&units=metric&lang=fr';
+        $url = 'https://api.openweathermap.org/data/2.5/weather';
+        $parametres = [
+            'appid=' . METEO_API_KEY,
+            'units=metric',
+            'lang=fr',
+        ];
+
+        if ($latitude !== null && $longitude !== null && is_numeric($latitude) && is_numeric($longitude)) {
+            $parametres[] = 'lat=' . urlencode((string) $latitude);
+            $parametres[] = 'lon=' . urlencode((string) $longitude);
+        } else {
+            $parametres[] = 'q=' . urlencode($villeDefaut);
+        }
+
+        $url .= '?' . implode('&', $parametres);
         $ch = curl_init($url);
         $options = [
             CURLOPT_RETURNTRANSFER => true,
@@ -244,8 +260,9 @@ function obtenirMeteo(string $ville): array
         if ($reponse !== false) {
             $data = json_decode($reponse, true);
             if (isset($data['main'])) {
+                $villeRetour = $ville !== '' ? $ville : ($data['name'] ?? $villeDefaut);
                 $meteo = [
-                    'ville'       => $ville,
+                    'ville'       => $villeRetour,
                     'temperature' => round($data['main']['temp'], 1),
                     'humidite'    => $data['main']['humidity'],
                     'description' => ucfirst($data['weather'][0]['description'] ?? ''),
@@ -259,15 +276,21 @@ function obtenirMeteo(string $ville): array
     }
 
     // Repli : dernière valeur en cache, sinon estimation
+    $cacheVille = $ville !== '' ? $ville : $villeDefaut;
     $stmt = getPDO()->prepare('SELECT * FROM meteo_cache WHERE ville = ? ORDER BY date_maj DESC LIMIT 1');
-    $stmt->execute([$ville]);
+    $stmt->execute([$cacheVille]);
     if ($cache = $stmt->fetch()) {
         return [
-            'ville' => $ville, 'temperature' => $cache['temperature'], 'humidite' => $cache['humidite'],
+            'ville' => $cacheVille, 'temperature' => $cache['temperature'], 'humidite' => $cache['humidite'],
             'description' => $cache['description'], 'vent' => $cache['vent'],
         ];
     }
-    return ['ville' => $ville, 'temperature' => 26.0, 'humidite' => 60, 'description' => 'Ensoleillé (estimation)', 'vent' => 8.0];
+    return ['ville' => $cacheVille, 'temperature' => 26.0, 'humidite' => 60, 'description' => 'Ensoleillé (estimation)', 'vent' => 8.0];
+}
+
+function obtenirMeteo(string $ville): array
+{
+    return obtenirMeteoParLocalisation(null, null, $ville);
 }
 
 function reponseChatGemini(string $message, ?array $contexte = null): string

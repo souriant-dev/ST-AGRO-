@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 exigerRole(['agronome']);
+ensureAffectationsAgronomesTableExists();
 $user = utilisateurCourant();
 $pdo = getPDO();
 
@@ -13,7 +14,8 @@ $stmt = $pdo->prepare('SELECT COUNT(*) FROM demandes_conseil WHERE agronome_id =
 $stmt->execute([$user['id']]);
 $mesDemandesEnCours = (int) $stmt->fetchColumn();
 
-$stmt = $pdo->query('SELECT COUNT(*) FROM exploitations');
+$stmt = $pdo->prepare('SELECT COUNT(*) FROM affectations_agronomes WHERE agronome_id = ?');
+$stmt->execute([$user['id']]);
 $totalExploitations = (int) $stmt->fetchColumn();
 
 $stmt = $pdo->query("SELECT COUNT(*) FROM analyses_phytosanitaires WHERE traite_par_agronome_id IS NULL");

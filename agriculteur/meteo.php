@@ -5,7 +5,7 @@ exigerRole(['agriculteur']);
 $user = utilisateurCourant();
 $pdo = getPDO();
 
-$stmt = $pdo->prepare('SELECT id, nom, ville FROM exploitations WHERE agriculteur_id = ?');
+$stmt = $pdo->prepare('SELECT id, nom, ville, latitude, longitude FROM exploitations WHERE agriculteur_id = ?');
 $stmt->execute([$user['id']]);
 $exploitations = $stmt->fetchAll();
 
@@ -28,12 +28,14 @@ require __DIR__ . '/../includes/layout_debut.php';
 <?php else: ?>
     <div class="grille-3">
         <?php foreach ($exploitations as $e):
-            $ville = $e['ville'] ?: ($user['ville'] ?: 'Yaoundé');
-            $meteo = obtenirMeteo($ville);
+            $latitude = $e['latitude'] !== null && $e['latitude'] !== '' ? (float) $e['latitude'] : null;
+            $longitude = $e['longitude'] !== null && $e['longitude'] !== '' ? (float) $e['longitude'] : null;
+            $ville = trim((string) ($e['ville'] ?? '')) ?: ($user['ville'] ?: 'Yaoundé');
+            $meteo = obtenirMeteoParLocalisation($latitude, $longitude, $ville);
         ?>
             <div class="meteo-widget">
                 <div class="ville"><?= nettoyer($e['nom']) ?></div>
-                <div class="desc">&#127780; <?= nettoyer($ville) ?> · <?= nettoyer($meteo['description']) ?></div>
+                <div class="desc">&#127780; <?= nettoyer($meteo['ville']) ?> · <?= nettoyer($meteo['description']) ?></div>
                 <div class="temp"><?= $meteo['temperature'] ?>°C</div>
                 <div class="meteo-details">
                     <div>Humidité<strong><?= $meteo['humidite'] ?>%</strong></div>
