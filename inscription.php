@@ -50,12 +50,12 @@ $csrf = jetonCSRF();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Créer un compte — ST-AGRO</title>
-<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/style.css?v=logo34">
 </head>
 <body>
 <div class="page-auth">
     <div class="auth-illustration">
-        <div class="logo"><span class="pastille"></span> ST-AGRO</div>
+        <div class="logo"><img src="logo.png" alt="ST-AGRO"> ST-AGRO</div>
         <div>
             <p class="citation">« Une décision agricole prise à temps vaut mieux qu'une récolte sauvée in extremis. »</p>
             <p class="citation-auteur">— L'équipe ST-AGRO</p>

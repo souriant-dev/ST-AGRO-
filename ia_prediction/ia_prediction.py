@@ -1,155 +1,111 @@
-import pandas as pd
-import numpy as np
+import csv
+import base64
+import json
+import os
+import sys
+from pathlib import Path
+
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 import tensorflow as tf
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# ============================================================
-# 1. CHARGEMENT DU DATASET
-# ============================================================
+DATA_FILE = Path(__file__).with_name("data.csv")
+TARGET = "rendement"
+NUMERIC_COLUMNS = [
+    "Azote",
+    "Phosphore",
+    "Potassium",
+    "temperature",
+    "ph",
+    "humidite_air",
+    "humidite_sol",
+    "luminosite",
+]
+CATEGORICAL_COLUMNS = ["plante", "type_sol"]
 
-data = pd.read_csv("agriculture.csv")
 
-print("Aperçu des données :")
-print(data.head())
+def charger_donnees(data_file=DATA_FILE):
+    with open(data_file, "r", encoding="utf-8", newline="") as fichier:
+        lignes = list(csv.DictReader(fichier, delimiter=";"))
+    if not lignes:
+        raise ValueError("data.csv est vide.")
 
-print("\nInformations :")
-print(data.info())
+    attendues = NUMERIC_COLUMNS + CATEGORICAL_COLUMNS + [TARGET]
+    manquantes = [colonne for colonne in attendues if colonne not in lignes[0]]
+    if manquantes:
+        raise ValueError(f"Colonnes manquantes dans data.csv : {', '.join(manquantes)}")
 
-# ============================================================
-# 2. ENCODAGE DU TYPE DE CULTURE
-# ============================================================
+    entrees = {colonne: [] for colonne in NUMERIC_COLUMNS + CATEGORICAL_COLUMNS}
+    cibles = []
+    for ligne in lignes:
+        for colonne in NUMERIC_COLUMNS:
+            entrees[colonne].append(float(ligne[colonne].strip().replace(",", ".")))
+        for colonne in CATEGORICAL_COLUMNS:
+            entrees[colonne].append(ligne[colonne].strip())
+        cibles.append(float(ligne[TARGET].strip().replace(",", ".")))
 
-# Transformer le type de culture en variables numériques
-data = pd.get_dummies(
-    data,
-    columns=["type_culture"],
-    dtype=int
-)
+    return {colonne: tf.constant(valeurs) for colonne, valeurs in entrees.items()}, tf.constant(cibles, dtype=tf.float32)
 
-print("\nDataset après encodage :")
-print(data.head())
 
-# ============================================================
-# 3. SÉPARATION DES ENTRÉES ET DE LA SORTIE
-# ============================================================
+def construire_modele(entrees):
+    couches = []
+    entrees_keras = {}
 
-# rendement = valeur que l'IA doit prédire
-X = data.drop("rendement", axis=1)
+    for colonne in NUMERIC_COLUMNS:
+        entree = tf.keras.Input(shape=(1,), name=colonne, dtype=tf.float32)
+        normalisation = tf.keras.layers.Normalization(axis=None)
+        normalisation.adapt(tf.reshape(entrees[colonne], (-1, 1)))
+        couches.append(normalisation(entree))
+        entrees_keras[colonne] = entree
 
-# Variable cible
-y = data["rendement"]
+    for colonne in CATEGORICAL_COLUMNS:
+        entree = tf.keras.Input(shape=(1,), name=colonne, dtype=tf.string)
+        encodage = tf.keras.layers.StringLookup(output_mode="one_hot")
+        encodage.adapt(entrees[colonne])
+        couches.append(encodage(entree))
+        entrees_keras[colonne] = entree
 
-# ============================================================
-# 4. DIVISION TRAIN / TEST
-# ============================================================
+    x = tf.keras.layers.Concatenate()(couches)
+    x = tf.keras.layers.Dense(32, activation="relu")(x)
+    x = tf.keras.layers.Dense(16, activation="relu")(x)
+    sortie = tf.keras.layers.Dense(1, name=TARGET)(x)
+    modele = tf.keras.Model(inputs=entrees_keras, outputs=sortie)
+    modele.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss="mse", metrics=["mae"])
+    return modele
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.20,
-    random_state=42
-)
 
-print("\nTaille entraînement :", X_train.shape)
-print("Taille test :", X_test.shape)
+def predire_rendement(modele, **parametres):
+    entrees = {
+        colonne: tf.constant([parametres[colonne]])
+        for colonne in NUMERIC_COLUMNS + CATEGORICAL_COLUMNS
+    }
+    return float(modele.predict(entrees, verbose=0)[0][0])
 
-# ============================================================
-# 5. NORMALISATION
-# ============================================================
 
-scaler = StandardScaler()
+def executer_prediction(parametres):
+    tf.random.set_seed(42)
+    entrees, cibles = charger_donnees()
+    modele = construire_modele(entrees)
+    modele.fit(entrees, cibles, epochs=80, batch_size=8, verbose=0)
+    return predire_rendement(modele, **parametres)
 
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
 
-# ============================================================
-# 6. CRÉATION DU MODÈLE TENSORFLOW
-# ============================================================
-
-model = tf.keras.Sequential([
-    
-    tf.keras.layers.Input(shape=(X_train.shape[1],)),
-
-    tf.keras.layers.Dense(64, activation="relu"),
-
-    tf.keras.layers.Dense(32, activation="relu"),
-
-    tf.keras.layers.Dense(16, activation="relu"),
-
-    # Une seule sortie : rendement prédit
-    tf.keras.layers.Dense(1)
-])
-
-# ============================================================
-# 7. COMPILATION
-# ============================================================
-
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-    loss="mse",
-    metrics=["mae"]
-)
-
-model.summary()
-
-# ============================================================
-# 8. ENTRAÎNEMENT
-# ============================================================
-
-history = model.fit(
-    X_train,
-    y_train,
-    epochs=200,
-    batch_size=16,
-    validation_split=0.2,
-    verbose=1
-)
-
-# ============================================================
-# 9. ÉVALUATION
-# ============================================================
-
-predictions = model.predict(X_test)
-
-predictions = predictions.flatten()
-
-mae = mean_absolute_error(y_test, predictions)
-rmse = np.sqrt(mean_squared_error(y_test, predictions))
-r2 = r2_score(y_test, predictions)
-
-print("\n==============================")
-print("RÉSULTATS DU MODÈLE")
-print("==============================")
-
-print(f"MAE  : {mae:.2f} t/ha")
-print(f"RMSE : {rmse:.2f} t/ha")
-print(f"R²   : {r2:.2f}")
-
-# ============================================================
-# 10. COMPARAISON RÉEL / PRÉDIT
-# ============================================================
-
-resultats = pd.DataFrame({
-    "Rendement réel": y_test.values,
-    "Rendement prédit": predictions
-})
-
-print("\nComparaison :")
-print(resultats)
-
-# ============================================================
-# 11. SAUVEGARDE DU MODÈLE
-# ============================================================
-
-model.save("modele_rendement.keras")
-
-# Sauvegarder également le scaler
-import joblib
-
-joblib.dump(scaler, "scaler.pkl")
-
-print("\nModèle sauvegardé dans : modele_rendement.keras")
-print("Scaler sauvegardé dans : scaler.pkl")
+if __name__ == "__main__":
+    try:
+        if len(sys.argv) > 1:
+            if sys.argv[1] == "--base64" and len(sys.argv) > 2:
+                parametres = json.loads(base64.b64decode(sys.argv[2]).decode("utf-8"))
+            else:
+                parametres = json.loads(sys.argv[1])
+            print(json.dumps({"rendement": executer_prediction(parametres)}, ensure_ascii=False), flush=True)
+        else:
+            exemple = {
+                "plante": "Mais", "Azote": 0.20, "Phosphore": 17, "Potassium": 98,
+                "temperature": 27.0, "ph": 5.8, "humidite_air": 78,
+                "humidite_sol": 61, "luminosite": 48000, "type_sol": "Sableux",
+            }
+            prediction = executer_prediction(exemple)
+            print(f"Rendement predit : {prediction:.2f} t/ha", flush=True)
+    except Exception as erreur:
+        print(json.dumps({"erreur": str(erreur)}, ensure_ascii=False), flush=True)
+        sys.exit(1)

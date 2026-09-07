@@ -5,7 +5,7 @@ exigerRole(['administrateur']);
 $pdo = getPDO();
 ensureMesuresTableExists();
 
-$capteursEtat = $pdo->query("SELECT c.id, c.code_capteur, c.type_capteur, c.statut AS statut_capteur,
+$capteursEtat = $pdo->query("SELECT c.id, c.code_capteur, c.adresse_ip, c.statut AS statut_capteur,
         e.nom AS exploitation_nom, u.nom AS agriculteur_nom, u.prenom AS agriculteur_prenom,
         r.derniere_mesure_releve, m.derniere_mesure_historique
     FROM capteurs c
@@ -51,11 +51,11 @@ require __DIR__ . '/../includes/layout_debut.php';
     <p style="color:var(--texte-attenue); font-size:0.85rem;">Un capteur est à vérifier s’il n’a envoyé aucune mesure depuis plus de 30 minutes.</p>
     <div class="table-wrap">
         <table class="table-app">
-            <thead><tr><th>Capteur</th><th>Exploitation</th><th>Agriculteur</th><th>Dernière mesure</th><th>État</th></tr></thead>
+            <thead><tr><th>Capteur / IP</th><th>Exploitation</th><th>Agriculteur</th><th>Dernière mesure</th><th>État</th></tr></thead>
             <tbody>
             <?php foreach ($capteursEtat as $capteur): ?>
                 <tr>
-                    <td><?= nettoyer($capteur['code_capteur']) ?><br><small><?= nettoyer($capteur['type_capteur']) ?></small></td>
+                    <td><?= nettoyer($capteur['code_capteur']) ?><br><small>IP : <?= nettoyer((string) $capteur['adresse_ip']) ?></small></td>
                     <td><?= nettoyer($capteur['exploitation_nom']) ?></td>
                     <td><?= nettoyer($capteur['agriculteur_prenom'] . ' ' . $capteur['agriculteur_nom']) ?></td>
                     <td><?= $capteur['derniere_mesure'] ? nettoyer(date('d/m/Y H:i', strtotime($capteur['derniere_mesure']))) : 'Aucune mesure' ?></td>

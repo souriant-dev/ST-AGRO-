@@ -1,5 +1,0 @@
-temperature,humidite_air,precipitation,humidite_sol,ph,azote,phosphore,potassium,matiere_organique,type_culture,rendement
-26.5,75,1200,65,6.2,80,40,50,3.5,maïs,4.2
-27.1,72,1100,60,6.5,75,45,55,4.1,maïs,4.5
-25.8,80,1400,70,6.0,90,50,60,4.8,riz,5.1
-28.2,68,900,55,5.8,65,35,45,2.9,maïs,3.6

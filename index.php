@@ -10,13 +10,13 @@ if (estConnecte()) { header('Location: ' . urlDashboard()); exit; }
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ST-AGRO — L'agriculture pilotée par la donnée</title>
 <meta name="description" content="ST-AGRO connecte capteurs, météo et agronomes pour aider les agriculteurs à décider plus vite.">
-<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/style.css?v=logo34">
 </head>
 <body>
 
 <header class="entete-publique">
     <div class="conteneur">
-        <div class="logo"><span class="pastille"></span> ST-AGRO</div>
+    <div class="logo"><img src="logo.png" alt="ST-AGRO"> ST-AGRO</div>
         <nav class="nav-publique">
             <a href="#fonctionnalites">Fonctionnalités</a>
             <a href="#roles">Pour qui ?</a>
@@ -151,7 +151,7 @@ if (estConnecte()) { header('Location: ' . urlDashboard()); exit; }
 
 <footer class="pied-page">
     <div class="conteneur">
-        <div class="logo"><span class="pastille"></span> ST-AGRO</div>
+    <div class="logo"><img src="logo.png" alt="ST-AGRO"> ST-AGRO</div>
         <div class="pied-liens">
             <a href="#fonctionnalites">Fonctionnalités</a>
             <a href="connexion.php">Se connecter</a>

@@ -11,11 +11,17 @@ define('DB_CHARSET', 'utf8mb4');
 // Clé API météo — https://openweathermap.org (créer un compte gratuit)
 define('METEO_API_KEY', '6edc0ffad9597f1502200515f2f98db7');
 
-// Clé API Mistral Studio — privilégier une variable d'environnement en production
-define('MISTRAL_API_KEY', getenv('MISTRAL_API_KEY') ?: '4W1sSkCziXVjpjcVmyzGw4oKWCuPdaub');
+// Clé API GroqCloud — définir GROQ_API_KEY dans l'environnement
+define('GROQ_API_KEY', getenv('GROQ_API_KEY') ?: '');
+
+// Clé API Gemini pour le diagnostic visuel des maladies et insectes
+define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: '');
+
+// Clé API Plant.id v3 pour l'évaluation sanitaire des plantes
+define('PLANT_ID_API_KEY', getenv('PLANT_ID_API_KEY') ?: '9OHLvTnz6w8z9wzobbEXkOYuabRJHRL1AYGuyAy0E9mZ3y5Wnr');
 
 // Clé API Pl@ntNet — https://my.plantnet.org/
-define('PLANTNET_API_KEY', getenv('PLANTNET_API_KEY') ?: '2b10HQN9MoyLyNziC5u9FOdVu');
+//define('PLANTNET_API_KEY', getenv('PLANTNET_API_KEY') ?: '2b10HQN9MoyLyNziC5u9FOdVu');
 
 // Clé API Geoapify — https://www.geoapify.com/
 define('GEOAPIFY_API_KEY', getenv('GEOAPIFY_API_KEY') ?: 'b3246354b4e841fa9fdb97c3ca0c9e14');

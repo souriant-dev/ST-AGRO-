@@ -13,8 +13,8 @@ $liensParRole = [
     'agriculteur' => [
         ['icone' => '&#9679;', 'texte' => 'Tableau de bord', 'href' => '/st-agro/agriculteur/dashboard.php', 'cle' => 'dashboard'],
         ['icone' => '&#127806;', 'texte' => 'Mes exploitations', 'href' => '/st-agro/agriculteur/exploitations.php', 'cle' => 'exploitations'],
-        ['icone' => '&#128225;', 'texte' => 'Capteurs & terrain', 'href' => '/st-agro/agriculteur/capteurs.php', 'cle' => 'capteurs'],
         ['icone' => '&#127780;', 'texte' => 'Météo', 'href' => '/st-agro/agriculteur/meteo.php', 'cle' => 'meteo'],
+        ['icone' => '&#128200;', 'texte' => 'Consulter prédictions', 'href' => '/st-agro/agriculteur/predictions.php', 'cle' => 'predictions'],
         ['icone' => '&#129717;', 'texte' => 'Analyse phytosanitaire', 'href' => '/st-agro/agriculteur/phytosanitaire.php', 'cle' => 'phyto'],
         ['icone' => '&#128276;', 'texte' => 'Alertes', 'href' => '/st-agro/agriculteur/alertes.php', 'cle' => 'alertes'],
         ['icone' => '&#128172;', 'texte' => 'Demander conseil à l’IA', 'href' => '/st-agro/agriculteur/assistant_ia.php', 'cle' => 'assistant_ia'],
@@ -32,7 +32,6 @@ $liensParRole = [
         ['icone' => '&#9679;', 'texte' => 'Tableau de bord', 'href' => '/st-agro/admin/dashboard.php', 'cle' => 'dashboard'],
         ['icone' => '&#128101;', 'texte' => 'Comptes utilisateurs', 'href' => '/st-agro/admin/utilisateurs.php', 'cle' => 'utilisateurs'],
         ['icone' => '&#127806;', 'texte' => 'Exploitations', 'href' => '/st-agro/admin/exploitations.php', 'cle' => 'exploitations'],
-        ['icone' => '&#128225;', 'texte' => 'État des capteurs', 'href' => '/st-agro/admin/capteurs.php', 'cle' => 'capteurs'],
         ['icone' => '&#128202;', 'texte' => 'Statistiques globales', 'href' => '/st-agro/admin/statistiques.php', 'cle' => 'statistiques'],
     ],
 ];
@@ -44,12 +43,12 @@ $libRole = ['agriculteur' => 'Agriculteur', 'agronome' => 'Agronome', 'administr
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= nettoyer($titrePage) ?> — ST-AGRO</title>
-<link rel="stylesheet" href="/st-agro/includes/style.css">
+<link rel="stylesheet" href="/st-agro/includes/style.css?v=logo34">
 </head>
 <body>
 <div class="app-shell">
     <aside class="barre-laterale">
-        <div class="logo"><span class="pastille"></span> ST-AGRO</div>
+        <div class="logo"><img src="/st-agro/logo.png" alt="ST-AGRO"> ST-AGRO</div>
         <ul class="nav-app">
             <?php foreach ($liensParRole[$role] as $lien): ?>
             <li><a href="<?= $lien['href'] ?>" class="<?= $pageActive === $lien['cle'] ? 'actif' : '' ?>">

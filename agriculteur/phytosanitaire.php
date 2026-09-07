@@ -33,15 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifierCSRF($_POST['csrf'] ?? null
         }
 
         if (empty($_SESSION['flash'])) {
-            $resultatPlantNet = $cheminImage ? analyserImagePlantNet($dossier . $nomFichier) : ['succes' => false];
+            $resultatPlantNet = $cheminImage ? analyserImagePhytosanitaire($dossier . $nomFichier) : ['succes' => false];
             $stmt = $pdo->prepare('INSERT INTO analyses_phytosanitaires (exploitation_id, image_path, diagnostic, niveau_risque, recommandation) VALUES (?, ?, ?, ?, ?)');
             $stmt->execute([
                 $exploitationId, $cheminImage,
-                $resultatPlantNet['diagnostic'] ?? 'Analyse en attente de validation par un agronome.',
+                $resultatPlantNet['diagnostic'] ?? $resultatPlantNet['message'] ?? 'Plant.id n’a pas pu établir de diagnostic.',
                 $resultatPlantNet['niveau_risque'] ?? 'faible',
-                $resultatPlantNet['recommandation'] ?? 'Un agronome examinera votre photo et complétera le diagnostic sous peu.',
+                $resultatPlantNet['recommandation'] ?? 'Réessayez avec une photo plus nette et centrée sur les feuilles ou les insectes visibles.',
             ]);
-            definirMessage('succes', $resultatPlantNet['succes'] ? 'Photo analysée par Pl@ntNet. Un agronome va vérifier le résultat.' : 'Photo envoyée. L’analyse sera complétée par un agronome.');
+            definirMessage($resultatPlantNet['succes'] ? 'succes' : 'erreur', $resultatPlantNet['succes'] ? 'Photo analysée par Plant.id. Un agronome va vérifier le résultat.' : ($resultatPlantNet['message'] ?? 'Plant.id n’a pas pu analyser cette photo.'));
             header('Location: /st-agro/agriculteur/phytosanitaire.php');
             exit;
         }

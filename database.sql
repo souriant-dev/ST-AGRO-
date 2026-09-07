@@ -51,10 +51,13 @@ CREATE TABLE exploitations (
     agriculteur_id INT NOT NULL,
     nom VARCHAR(150) NOT NULL,
     culture VARCHAR(120) NOT NULL,
+    type_sol ENUM('sableux','limoneux','argileux','humifere') DEFAULT NULL,
     superficie DECIMAL(10,2) DEFAULT NULL COMMENT 'en hectares',
     ville VARCHAR(120) DEFAULT NULL,
     latitude DECIMAL(10,6) DEFAULT NULL,
     longitude DECIMAL(10,6) DEFAULT NULL,
+    adresse_ip VARCHAR(45) DEFAULT NULL,
+    irrigation_active TINYINT(1) NOT NULL DEFAULT 0,
     date_plantation DATE DEFAULT NULL,
     statut ENUM('en_cours','recoltee','en_alerte') NOT NULL DEFAULT 'en_cours',
     date_creation DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -78,7 +81,7 @@ CREATE TABLE capteurs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     exploitation_id INT NOT NULL,
     code_capteur VARCHAR(50) NOT NULL UNIQUE,
-    type_capteur ENUM('humidite_sol','temperature','luminosite','ph_sol','pluviometrie','azote_sol','phosphore_sol','potassium_sol') NOT NULL,
+    adresse_ip VARCHAR(45) DEFAULT NULL,
     statut ENUM('actif','inactif','en_panne') NOT NULL DEFAULT 'actif',
     date_installation DATE DEFAULT NULL,
     FOREIGN KEY (exploitation_id) REFERENCES exploitations(id) ON DELETE CASCADE
@@ -101,8 +104,15 @@ CREATE TABLE mesures (
     id INT AUTO_INCREMENT PRIMARY KEY,
     capteur_id INT NOT NULL,
     exploitation_id INT NOT NULL,
-    valeur DECIMAL(10,2) NOT NULL,
-    unite VARCHAR(20) DEFAULT NULL,
+    temperature DECIMAL(10,2) DEFAULT NULL,
+    humidite_air DECIMAL(10,2) DEFAULT NULL,
+    humidite_sol DECIMAL(10,2) DEFAULT NULL,
+    ph DECIMAL(10,2) DEFAULT NULL,
+    luminosite DECIMAL(10,2) DEFAULT NULL,
+    niveau_eau DECIMAL(10,2) DEFAULT NULL,
+    azote DECIMAL(10,2) DEFAULT NULL,
+    phosphore DECIMAL(10,2) DEFAULT NULL,
+    potassium DECIMAL(10,2) DEFAULT NULL,
     date_mesure DATETIME DEFAULT CURRENT_TIMESTAMP,
     KEY idx_mesures_capteur_date (capteur_id, date_mesure),
     KEY idx_mesures_exploitation_date (exploitation_id, date_mesure),
@@ -215,31 +225,31 @@ INSERT INTO utilisateurs (nom, prenom, email, telephone, mot_de_passe, role, vil
 ('Mballa', 'Jean', 'agriculteur@st-agro.cm', '677111111', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'agriculteur', 'Bafoussam'),
 ('Nkeng', 'Sarah', 'agronome@st-agro.cm', '655222222', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'agronome', 'Yaoundé');
 
-INSERT INTO exploitations (agriculteur_id, nom, culture, superficie, ville, date_plantation, statut) VALUES
-(2, 'Champ de Nkolbisson', 'Maïs', 2.5, 'Yaoundé', '2026-03-01', 'en_cours'),
-(2, 'Parcelle du Nord', 'Cacao', 4.0, 'Bafoussam', '2025-11-15', 'en_alerte');
+INSERT INTO exploitations (agriculteur_id, nom, culture, superficie, ville, adresse_ip, date_plantation, statut) VALUES
+(2, 'Champ de Nkolbisson', 'Maïs', 2.5, 'Yaoundé', '192.168.1.10', '2026-03-01', 'en_cours'),
+(2, 'Parcelle du Nord', 'Cacao', 4.0, 'Bafoussam', '192.168.1.11', '2025-11-15', 'en_alerte');
 
-INSERT INTO capteurs (exploitation_id, code_capteur, type_capteur, statut, date_installation) VALUES
-(1, 'CAP-001', 'humidite_sol', 'actif', '2026-03-05'),
-(1, 'CAP-002', 'temperature', 'actif', '2026-03-05'),
-(1, 'CAP-004', 'ph_sol', 'actif', '2026-03-06'),
-(1, 'CAP-005', 'azote_sol', 'actif', '2026-03-07'),
-(1, 'CAP-006', 'phosphore_sol', 'actif', '2026-03-07'),
-(1, 'CAP-007', 'potassium_sol', 'actif', '2026-03-07'),
-(2, 'CAP-003', 'humidite_sol', 'actif', '2025-11-20');
+INSERT INTO capteurs (exploitation_id, code_capteur, adresse_ip, statut, date_installation) VALUES
+(1, 'CAP-001', '192.168.1.10', 'actif', '2026-03-05'),
+(1, 'CAP-002', '192.168.1.10', 'actif', '2026-03-05'),
+(1, 'CAP-004', '192.168.1.10', 'actif', '2026-03-06'),
+(1, 'CAP-005', '192.168.1.10', 'actif', '2026-03-07'),
+(1, 'CAP-006', '192.168.1.10', 'actif', '2026-03-07'),
+(1, 'CAP-007', '192.168.1.10', 'actif', '2026-03-07'),
+(2, 'CAP-003', '192.168.1.11', 'actif', '2025-11-20');
 
 INSERT INTO releves_capteurs (capteur_id, valeur, unite) VALUES
 (1, 42.5, '%'), (2, 27.3, '°C'), (3, 55.0, '%');
 
-INSERT INTO mesures (capteur_id, exploitation_id, valeur, unite, date_mesure) VALUES
-(1, 1, 38.4, '%', '2026-03-10 08:00:00'),
-(1, 1, 40.1, '%', '2026-03-10 10:00:00'),
-(1, 1, 42.5, '%', '2026-03-10 12:00:00'),
-(2, 1, 24.6, '°C', '2026-03-10 08:00:00'),
-(2, 1, 26.2, '°C', '2026-03-10 10:00:00'),
-(2, 1, 27.3, '°C', '2026-03-10 12:00:00'),
-(3, 2, 50.2, '%', '2026-03-10 09:00:00'),
-(3, 2, 55.0, '%', '2026-03-10 12:00:00');
+INSERT INTO mesures (capteur_id, exploitation_id, temperature, humidite_air, humidite_sol, luminosite, niveau_eau, azote, phosphore, potassium, date_mesure) VALUES
+(1, 1, NULL, NULL, 38.4, NULL, NULL, NULL, NULL, NULL, '2026-03-10 08:00:00'),
+(1, 1, NULL, NULL, 40.1, NULL, NULL, NULL, NULL, NULL, '2026-03-10 10:00:00'),
+(1, 1, NULL, NULL, 42.5, NULL, NULL, NULL, NULL, NULL, '2026-03-10 12:00:00'),
+(2, 1, 24.6, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-10 08:00:00'),
+(2, 1, 26.2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-10 10:00:00'),
+(2, 1, 27.3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-10 12:00:00'),
+(3, 2, NULL, NULL, 50.2, NULL, NULL, NULL, NULL, NULL, '2026-03-10 09:00:00'),
+(3, 2, NULL, NULL, 55.0, NULL, NULL, NULL, NULL, NULL, '2026-03-10 12:00:00');
 
 INSERT INTO alertes (exploitation_id, titre, message, niveau) VALUES
 (2, 'Humidité critique', 'Le taux d\'humidité du sol est descendu sous le seuil recommandé.', 'critique');
